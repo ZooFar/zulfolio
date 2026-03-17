@@ -133,7 +133,7 @@ input:focus{border-color:var(--accent);}
       <input type="password" id="pw" placeholder="Password" onkeydown="if(event.key==='Enter')login()">
       <button class="btn-primary" onclick="login()">Unlock</button>
       <div class="lock-err" id="perr">Wrong password</div>
-      <div style="margin-top:12px;"><button onclick="localStorage.setItem('wl3_pw',DEFAULT_PW);document.getElementById('pw').value='';document.getElementById('perr').style.display='none';alert('Password reset to 212091913');" style="background:none;border:none;color:#a8a29e;font-size:12px;cursor:pointer;text-decoration:underline;">Forgot password? Reset to default</button></div>
+      <div style="margin-top:12px;"><button onclick="localStorage.setItem('wl3_pw',DEFAULT_PW);document.getElementById('pw').value='';document.getElementById('perr').style.display='none';alert('Password reset to your uni student no');" style="background:none;border:none;color:#a8a29e;font-size:12px;cursor:pointer;text-decoration:underline;">Forgot password? Reset to default</button></div>
     </div>
   </div>
 </div>
@@ -174,7 +174,7 @@ input:focus{border-color:var(--accent);}
     <div class="day-card">
       <div class="day-date" style="justify-content:space-between;flex-wrap:wrap;"><span>Today <span id="todayDate"></span></span><span style="font-size:10px;color:#a8a29e;">Logging for: <input type="date" id="entryDatePicker" onchange="updateLogDate()" style="border:1px solid #e7e5e0;border-radius:6px;padding:2px 6px;font-size:11px;background:#f5f3f0;color:#1c1917;outline:none;"></span></div>
       <div class="day-prompt">What did you get done <em>today?</em></div>
-      <textarea id="rawIn" placeholder="e.g. developed a personal work tracking web app, because I just forgot all the things I do, oh and I did salesforce stuff.... "></textarea>
+      <textarea id="rawIn" placeholder="e.g. developed a personal work tracking web app, because I just forget all the things I do, oh and I did salesforce stuff.... "></textarea>
       <p class="input-hint">Spelling mistakes, shorthand, half sentences - all fine. Just tell it like it is.</p>
       <div class="btn-row">
         <button class="btn-log" id="logBtn" onclick="processDay()">✨ Log my day</button>
@@ -240,7 +240,7 @@ input:focus{border-color:var(--accent);}
     </div>
     <div style="background:#fff;border:2px solid #2563eb;border-radius:12px;padding:1.5rem;margin-top:1.25rem;"><div style="font-size:15px;font-weight:700;color:#1c1917;margin-bottom:6px;">Manager report</div><p style="font-size:12px;color:#78716c;margin-bottom:14px;">Clean printable report. Pick your period:</p><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;"><button onclick="setReportRange('week')" style="padding:5px 12px;border:1px solid #e7e5e0;border-radius:99px;background:transparent;color:#78716c;font-size:12px;cursor:pointer;">This week</button><button onclick="setReportRange('month')" style="padding:5px 12px;border:1px solid #e7e5e0;border-radius:99px;background:transparent;color:#78716c;font-size:12px;cursor:pointer;">This month</button><button onclick="setReportRange('quarter')" style="padding:5px 12px;border:1px solid #e7e5e0;border-radius:99px;background:transparent;color:#78716c;font-size:12px;cursor:pointer;">This quarter</button><button onclick="setReportRange('all')" style="padding:5px 12px;border:1px solid #e7e5e0;border-radius:99px;background:transparent;color:#78716c;font-size:12px;cursor:pointer;">All time</button></div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;"><input type="date" id="reportFrom" style="padding:6px 10px;border:1px solid #e7e5e0;border-radius:6px;font-size:12px;background:#f5f3f0;color:#1c1917;outline:none;"><span style="font-size:12px;color:#a8a29e;">to</span><input type="date" id="reportTo" style="padding:6px 10px;border:1px solid #e7e5e0;border-radius:6px;font-size:12px;background:#f5f3f0;color:#1c1917;outline:none;"><button onclick="dlManagerReport()" style="padding:6px 18px;border:none;border-radius:99px;background:#2563eb;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">Download report</button></div></div>
 
-    <!--Don't need this right now-->
+    <!--I Don't need this right now-->
    <!-- <div style="background:var(--accent-bg);border:1px solid var(--accent);border-radius:var(--r);padding:1.25rem;margin-top:1rem;">   
        <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:8px;">📥 How to import into Google Sheets</div>
       <p style="font-size:13px;color:var(--ink2);line-height:1.7;">After downloading the CSV: open Google Sheets → <code>File → Import → Upload</code> → select the file → choose <strong>Replace current sheet</strong> or <strong>Insert new sheet</strong>. Done — all your data is in Sheets.</p>
@@ -262,7 +262,7 @@ input:focus{border-color:var(--accent);}
     <div class="setup-step">
       <div class="step-hd"><span class="step-num">2</span><span class="step-title">Change password</span></div>
       <div class="step-body">
-        <p style="margin-bottom:10px;">Default password is <code>worklog2025</code> — change it to something personal.</p>
+        <p style="margin-bottom:10px;">Default password is <code>your university student no</code> — change it to something personal.</p>
         <input type="password" id="np1" placeholder="New password" style="width:200px;margin-right:8px;margin-bottom:8px;">
         <input type="password" id="np2" placeholder="Confirm" style="width:200px;margin-bottom:8px;">
         <button class="btn-sm" onclick="changePw()">Update</button>
@@ -270,15 +270,14 @@ input:focus{border-color:var(--accent);}
       </div>
     </div>
     <div class="setup-step">
-      <div class="step-hd"><span class="step-num">3</span><span class="step-title">Backing up to Google Sheets</span></div>
+      <div class="step-hd"><span class="step-num">3</span><span class="step-title">Backing up your data</span></div>
       <div class="step-body">
-        <p style="margin-bottom:10px;">Your data lives locally in this browser. To keep it safe in Google Sheets, export a CSV regularly and import it:</p>
+        <p style="margin-bottom:10px;">Your data lives in this browser on this device. To keep it safe, export a CSV every Friday — ZulFolio will remind you automatically.</p>
         <ol>
           <li>Go to <strong>Export</strong> in the sidebar → <strong>All entries — CSV</strong></li>
-          <li>Go to <a href="https://sheets.google.com" target="_blank">sheets.google.com</a> → open or create your WorkLog sheet</li>
-          <li><code>File → Import → Upload</code> → select the CSV → <strong>Replace current sheet</strong></li>
+          <li>Save the file somewhere safe — Google Drive, OneDrive, or your desktop</li>
         </ol>
-        <p style="margin-top:10px;">Do this weekly or whenever you want a fresh backup. Takes about 30 seconds.</p>
+        <p style="margin-top:10px;color:var(--amber);font-size:12px;">⚠️ If you clear your browser data or switch browsers, your entries will be lost without a backup.</p>
       </div>
     </div>
     <div style="background:var(--card);border:1.5px solid var(--rose-bg);border-radius:var(--r);padding:1rem 1.25rem;margin-top:1rem;">
@@ -334,6 +333,7 @@ async function boot(){
     exportEl.textContent=days===0?'Today':days===1?'Yesterday':`${days}d ago`;
   }
   var _ts=new Date().toISOString().slice(0,10);var _dp=document.getElementById('entryDatePicker');if(_dp){_dp.value=_ts;_dp.max=_ts;}
+  checkFridayReminder();
   renderStats();renderHistory();renderWeekly();
 }
 
@@ -704,6 +704,38 @@ function dlManagerReport(){
   var gd=new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
   var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Report</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:sans-serif;background:#fff;color:#111827;padding:44px;max-width:760px;margin:0 auto}@media print{body{padding:28px}@page{margin:18mm}}</'+'style></'+'head><body><div style="border-bottom:3px solid #2563eb;padding-bottom:20px;margin-bottom:28px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#2563eb;margin-bottom:6px">Work Report</div><h1 style="font-size:26px;font-weight:800;color:#111827;margin-bottom:4px">'+label+'</h1><div style="font-size:12px;color:#6b7280">'+entries.length+' entries - Generated '+gd+'</div></div>'+sec('Wins','#16a34a',col('wins'))+sec('Completed','#d97706',col('tasks'))+sec('KPIs','#2563eb',col('kpis'))+sec('In progress','#7c3aed',col('inProgress'))+sec('Blockers','#e11d48',col('blockers'))+(wkRows?'<div style="margin-bottom:22px"><div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280;border-bottom:2px solid #e5e7eb;padding-bottom:6px;margin-bottom:10px">Weekly summaries</div>'+wkRows+'</div>':'')+'<div><div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280;border-bottom:2px solid #e5e7eb;padding-bottom:6px;margin-bottom:10px">Daily log</div>'+dayRows+'</div><div style="margin-top:36px;padding-top:12px;border-top:1px solid #e5e7eb;font-size:11px;color:#9ca3af;text-align:center">Generated by ZulFolio - '+gd+'</div></'+'body></'+'html>';
   var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([html],{type:'text/html'}));a.download='report_'+fv+'_'+tv+'.html';a.click();
+}
+
+
+function checkFridayReminder(){
+  var now=new Date();
+  if(now.getDay()!==5)return;
+  var lastReminder=localStorage.getItem('wl3_fridayReminder');
+  var todayStr=now.toISOString().slice(0,10);
+  if(lastReminder===todayStr)return;
+  var entries=getEntries();
+  if(!entries.length)return;
+  localStorage.setItem('wl3_fridayReminder',todayStr);
+  setTimeout(function(){
+    var banner=document.createElement('div');
+    banner.id='fridayBanner';
+    banner.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1c1917;color:#faf9f7;padding:16px 24px;border-radius:12px;font-family:"Plus Jakarta Sans",sans-serif;font-size:13px;font-weight:600;z-index:99999;display:flex;align-items:center;gap:16px;box-shadow:0 4px 24px rgba(0,0,0,.25);max-width:500px;';
+    var msg=document.createElement('span');
+    msg.textContent='Friday reminder — back up your ZulFolio data!';
+    var exportBtn=document.createElement('button');
+    exportBtn.textContent='Export now';
+    exportBtn.style.cssText='padding:6px 14px;border:none;border-radius:99px;background:#2563eb;color:#fff;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;';
+    exportBtn.onclick=function(){dlCSV('all');banner.remove();};
+    var closeBtn=document.createElement('button');
+    closeBtn.textContent='x';
+    closeBtn.style.cssText='padding:4px 8px;border:none;border-radius:99px;background:transparent;color:#a8a29e;font-size:16px;cursor:pointer;';
+    closeBtn.onclick=function(){banner.remove();};
+    banner.appendChild(msg);
+    banner.appendChild(exportBtn);
+    banner.appendChild(closeBtn);
+    document.body.appendChild(banner);
+    setTimeout(function(){if(banner.parentElement)banner.remove();},15000);
+  },1500);
 }
 </script>
 </body>
