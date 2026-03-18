@@ -148,6 +148,7 @@ input:focus{border-color:var(--accent);}
   <button class="sb-btn" data-p="history" onclick="nav('history',this)"><span class="sb-icon">📋</span> Daily history</button>
   <button class="sb-btn" data-p="weekly" onclick="nav('weekly',this)"><span class="sb-icon">📅</span> Weekly summaries</button>
   <button class="sb-btn" data-p="grammar" onclick="nav('grammar',this)"><span class="sb-icon">📈</span> Writing Coach</button>
+  <button class="sb-btn" data-p="tasks" onclick="nav('tasks',this)"><span class="sb-icon">✅</span> Tasks</button>
   <div class="sb-section">Data</div>
   <button class="sb-btn" data-p="export" onclick="nav('export',this)"><span class="sb-icon">⬇️</span> Export</button>
   <button class="sb-btn" data-p="setup" onclick="nav('setup',this)"><span class="sb-icon">⚙️</span> Setup</button>
@@ -202,7 +203,7 @@ input:focus{border-color:var(--accent);}
 
   <div class="page" id="page-weekly">
     <div class="pg-title">Weekly <em>summaries</em></div>
-    <p class="pg-sub">AI generated overview of each week</p>
+    <p class="pg-sub">AI-generated overview of each week</p>
     <div id="weeklyList"></div>
   </div>
 
@@ -211,6 +212,21 @@ input:focus{border-color:var(--accent);}
     <p class="pg-sub">YOU Write it. AI Rates it. YOU Improve it. AI coach advice given every 2 weeks</p>
     <div id="grammarContent"></div>
     <div id="grammarAdviceSection" style="margin-top:1.5rem;"></div>
+  </div>
+
+  <div class="page" id="page-tasks">
+    <div class="pg-title">My <em>tasks</em></div>
+    <p class="pg-sub">Pulled from your daily logs — tick off as you go, edit wording, track progress</p>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1.5rem;">
+      <div class="stat"><div class="stat-l">This week</div><div class="stat-v" id="t-week">0</div><div class="stat-s">completed</div></div>
+      <div class="stat"><div class="stat-l">This month</div><div class="stat-v" id="t-month">0</div><div class="stat-s">completed</div></div>
+      <div class="stat"><div class="stat-l">This quarter</div><div class="stat-v" id="t-quarter">0</div><div class="stat-s">completed</div></div>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--rule);border-radius:var(--r);padding:1.25rem;margin-bottom:1.5rem;display:flex;gap:10px;align-items:center;">
+      <input type="text" id="newTaskInput" placeholder="Add a task manually..." style="flex:1;padding:9px 12px;border:1.5px solid var(--rule);border-radius:var(--r-sm);background:var(--surface);color:var(--ink);font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;outline:none;" onkeydown="if(event.key==='Enter')addManualTask()">
+      <button onclick="addManualTask()" class="btn-sm">+ Add task</button>
+    </div>
+    <div id="taskList"></div>
   </div>
 
   <div class="page" id="page-export">
@@ -232,7 +248,12 @@ input:focus{border-color:var(--accent);}
         <h3 style="font-size:14px;font-weight:700;margin-bottom:4px;">Weekly summaries — CSV</h3>
         <p style="font-size:12px;color:var(--ink3);">All generated weekly summaries</p>
       </div>
-      <div onclick="copyWeekText()" style="background:var(--card);border:1.5px solid var(--rule);border-radius:var(--r);padding:1.25rem;cursor:pointer;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--rule)'">
+      <div onclick="dlTasksCSV()" style="background:var(--card);border:1.5px solid var(--rule);border-radius:var(--r);padding:1.25rem;cursor:pointer;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--rule)'">
+        <div style="font-size:22px;margin-bottom:8px;">✅</div>
+        <h3 style="font-size:14px;font-weight:700;margin-bottom:4px;">Tasks — CSV</h3>
+        <p style="font-size:12px;color:var(--ink3);">All tasks with status, dates and completion</p>
+      </div>
+      <div onclick="copyWeekText()"  style="background:var(--card);border:1.5px solid var(--rule);border-radius:var(--r);padding:1.25rem;cursor:pointer;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--rule)'">
         <div style="font-size:22px;margin-bottom:8px;">📋</div>
         <h3 style="font-size:14px;font-weight:700;margin-bottom:4px;">Copy week as text</h3>
         <p style="font-size:12px;color:var(--ink3);">Paste into emails or Teams</p>
@@ -291,7 +312,7 @@ input:focus{border-color:var(--accent);}
 <div class="toast" id="toast"></div>
 
 <script>
-const K={entries:'wl3_entries',summaries:'wl3_summaries',grammarAdvice:'wl3_grammarAdvice',pw:'wl3_pw',apiKey:'wl3_apikey',authed:'wl3_authed'};
+const K={entries:'wl3_entries',summaries:'wl3_summaries',grammarAdvice:'wl3_grammarAdvice',tasks:'wl3_tasks',pw:'wl3_pw',apiKey:'wl3_apikey',authed:'wl3_authed'};
 const DEFAULT_PW='212091913';
 
 function login(){
@@ -354,6 +375,7 @@ function nav(p,el){
   if(p==='history')renderHistory();
   if(p==='weekly')renderWeekly();
   if(p==='grammar'){renderGrammar();renderGrammarAdviceSection();}
+  if(p==='tasks')renderTasks();
 }
 
 let pendingResult=null;
@@ -461,7 +483,9 @@ async function saveEntry(){
   var _pv=document.getElementById('entryDatePicker')?document.getElementById('entryDatePicker').value:'';
   const now=_pv?new Date(_pv+'T'+new Date().toTimeString().slice(0,8)):new Date();
   const entry={id:now.getTime(),date:now.toISOString(),dayLabel:now.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'}),weekStart:getMonday(now),text:raw,rawText:raw,cleanText:parsed.cleanSummary||'',tags:(parsed.tags||[]).join(', '),wins:(parsed.wins||[]).join(' | '),kpis:(parsed.kpis||[]).join(' | '),tasks:(parsed.tasks||[]).join(' | '),inProgress:(parsed.inProgress||[]).join(' | '),blockers:(parsed.blockers||[]).join(' | '),dayMood:parsed.dayMood||'',grammarScore:parsed.grammarScore||null,parsed};
-  const entries=getEntries();entries.unshift(entry);saveEntries(entries);renderStats();
+  const entries=getEntries();entries.unshift(entry);saveEntries(entries);
+  mergeTasksFromEntry(entry);
+  renderStats();
   btn.disabled=false;btn.textContent='💾 Save to log';
   clearToday();renderStats();
   toast('Saved ✓');
@@ -737,6 +761,196 @@ function checkFridayReminder(){
     setTimeout(function(){if(banner.parentElement)banner.remove();},15000);
   },1500);
 }
+
+// ── Tasks ────────────────────────────────────────────────
+function addManualTask(){
+  var inp=document.getElementById('newTaskInput');
+  var text=inp.value.trim();
+  if(!text){toast('Type a task first');return;}
+  var tasks=getTasks();
+  tasks.unshift({
+    id:Date.now()+Math.random(),
+    text:text,
+    date:new Date().toISOString(),
+    dayLabel:new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'}),
+    done:false,
+    doneAt:null,
+    manual:true
+  });
+  saveTasks(tasks);
+  inp.value='';
+  renderTasks();
+  toast('Task added ✓');
+}
+
+function getTasks(){try{return JSON.parse(localStorage.getItem(K.tasks)||'[]');}catch{return[];}}
+function saveTasks(t){localStorage.setItem(K.tasks,JSON.stringify(t));}
+
+function mergeTasksFromEntry(entry){
+  var newTasks=entry.parsed&&entry.parsed.tasks?entry.parsed.tasks:[];
+  if(!newTasks.length)return;
+  var existing=getTasks();
+  var existingTexts=existing.map(function(t){return t.text.toLowerCase().trim();});
+  var added=false;
+  newTasks.forEach(function(taskText){
+    if(!existingTexts.includes(taskText.toLowerCase().trim())){
+      existing.unshift({
+        id:Date.now()+Math.random(),
+        text:taskText,
+        date:entry.date,
+        dayLabel:entry.dayLabel,
+        done:false,
+        doneAt:null
+      });
+      added=true;
+    }
+  });
+  if(added)saveTasks(existing);
+}
+
+function renderTasks(){
+  var tasks=getTasks();
+  var el=document.getElementById('taskList');
+  if(!el)return;
+  var now=new Date();
+  var weekAgo=new Date(Date.now()-7*86400000);
+  var monthStart=new Date(now.getFullYear(),now.getMonth(),1);
+  var q=Math.floor(now.getMonth()/3);
+  var quarterStart=new Date(now.getFullYear(),q*3,1);
+  var done=tasks.filter(function(t){return t.done&&t.doneAt;});
+  document.getElementById('t-week').textContent=done.filter(function(t){return new Date(t.doneAt)>=weekAgo;}).length;
+  document.getElementById('t-month').textContent=done.filter(function(t){return new Date(t.doneAt)>=monthStart;}).length;
+  document.getElementById('t-quarter').textContent=done.filter(function(t){return new Date(t.doneAt)>=quarterStart;}).length;
+  if(!tasks.length){
+    el.innerHTML='<div class="empty"><div class="empty-icon">&#9989;</div>No tasks yet &#8212; log a day and your tasks will appear here automatically.</div>';
+    return;
+  }
+  var todo=tasks.filter(function(t){return !t.done;}).sort(function(a,b){return new Date(b.date)-new Date(a.date);});
+  var doneList=tasks.filter(function(t){return t.done;}).sort(function(a,b){return new Date(b.doneAt)-new Date(a.doneAt);});
+  var sorted=todo.concat(doneList);
+  el.innerHTML='';
+  sorted.forEach(function(task){
+    var isDone=task.done;
+    var dateLabel=new Date(task.date.slice(0,10)+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+    var doneLabel=isDone&&task.doneAt?' &#183; completed '+new Date(task.doneAt).toLocaleDateString('en-GB',{day:'numeric',month:'short'}):'';
+    var row=document.createElement('div');
+    row.id='task-'+task.id;
+    row.style.cssText='display:flex;align-items:flex-start;gap:12px;padding:14px 0;border-bottom:1px solid var(--rule);opacity:'+(isDone?'0.45':'1')+';';
+    var cb=document.createElement('input');
+    cb.type='checkbox';
+    cb.checked=isDone;
+    cb.style.cssText='margin-top:3px;width:16px;height:16px;cursor:pointer;accent-color:var(--accent);flex-shrink:0;';
+    cb.dataset.tid=String(task.id);
+    cb.addEventListener('change',function(){toggleTask(this.dataset.tid);});
+    var body=document.createElement('div');
+    body.style.cssText='flex:1;min-width:0;';
+    var textDiv=document.createElement('div');
+    textDiv.id='task-text-'+task.id;
+    textDiv.style.cssText='font-size:14px;color:var(--ink2);line-height:1.6;'+(isDone?'text-decoration:line-through;color:var(--ink4);':'');
+    textDiv.textContent=task.text;
+    var meta=document.createElement('div');
+    meta.style.cssText='font-size:11px;color:var(--ink4);margin-top:3px;';
+    meta.innerHTML=dateLabel+doneLabel;
+    body.appendChild(textDiv);
+    body.appendChild(meta);
+    var btnGroup=document.createElement('div');
+    btnGroup.style.cssText='display:flex;gap:6px;flex-shrink:0;';
+    if(!isDone){
+      var editBtn=document.createElement('button');
+      editBtn.textContent='Edit';
+      editBtn.style.cssText='padding:3px 10px;font-size:11px;font-weight:600;border:1px solid var(--rule);border-radius:99px;background:transparent;color:var(--ink4);cursor:pointer;';
+      editBtn.dataset.tid=String(task.id);
+      editBtn.addEventListener('click',function(){editTask(this.dataset.tid);});
+      btnGroup.appendChild(editBtn);
+    }
+    var delBtn=document.createElement('button');
+    delBtn.textContent='Remove';
+    delBtn.style.cssText='padding:3px 10px;font-size:11px;border:1px solid var(--rule);border-radius:99px;background:transparent;color:var(--ink4);cursor:pointer;';
+    delBtn.dataset.tid=String(task.id);
+    delBtn.addEventListener('click',function(){deleteTask(this.dataset.tid);});
+    btnGroup.appendChild(delBtn);
+    row.appendChild(cb);
+    row.appendChild(body);
+    row.appendChild(btnGroup);
+    el.appendChild(row);
+  });
+}
+
+function toggleTask(id){
+  var tasks=getTasks();
+  var idx=tasks.findIndex(function(t){return String(t.id)===String(id);});
+  if(idx===-1)return;
+  tasks[idx].done=!tasks[idx].done;
+  tasks[idx].doneAt=tasks[idx].done?new Date().toISOString():null;
+  saveTasks(tasks);
+  renderTasks();
+  if(tasks[idx].done)toast('Task completed ✓');
+}
+
+function editTask(id){
+  var tasks=getTasks();
+  var task=tasks.find(function(t){return String(t.id)===String(id);});
+  if(!task)return;
+  var textEl=document.getElementById('task-text-'+id);
+  if(!textEl||textEl.querySelector('input'))return;
+  textEl.innerHTML='';
+  var inp=document.createElement('input');
+  inp.type='text';
+  inp.value=task.text;
+  inp.style.cssText='width:100%;padding:6px 10px;border:1.5px solid var(--accent);border-radius:var(--r-sm);background:var(--surface);color:var(--ink);font-family:"Plus Jakarta Sans",sans-serif;font-size:14px;outline:none;';
+  inp.dataset.tid=String(id);
+  inp.addEventListener('keydown',function(e){if(e.key==='Enter')saveTaskEdit(this.dataset.tid);if(e.key==='Escape')renderTasks();});
+  var btnRow=document.createElement('div');
+  btnRow.style.cssText='display:flex;gap:6px;margin-top:6px;';
+  var saveB=document.createElement('button');
+  saveB.textContent='Save';
+  saveB.style.cssText='padding:4px 12px;border:none;border-radius:var(--r-sm);background:var(--accent);color:#fff;font-size:12px;font-weight:700;cursor:pointer;';
+  saveB.dataset.tid=String(id);
+  saveB.addEventListener('click',function(){saveTaskEdit(this.dataset.tid);});
+  var cancelB=document.createElement('button');
+  cancelB.textContent='Cancel';
+  cancelB.style.cssText='padding:4px 10px;border:1px solid var(--rule);border-radius:var(--r-sm);background:transparent;color:var(--ink3);font-size:12px;cursor:pointer;';
+  cancelB.addEventListener('click',function(){renderTasks();});
+  btnRow.appendChild(saveB);
+  btnRow.appendChild(cancelB);
+  textEl.appendChild(inp);
+  textEl.appendChild(btnRow);
+  inp.focus();inp.select();
+}
+
+function saveTaskEdit(id){
+  var tasks=getTasks();
+  var idx=tasks.findIndex(function(t){return String(t.id)===String(id);});
+  if(idx===-1)return;
+  var inp=document.querySelector('#task-text-'+id+' input');
+  if(!inp)return;
+  var val=inp.value.trim();
+  if(!val)return;
+  tasks[idx].text=val;
+  saveTasks(tasks);
+  renderTasks();
+  toast('Task updated ✓');
+}
+
+function deleteTask(id){
+  if(!confirm('Remove this task?'))return;
+  saveTasks(getTasks().filter(function(t){return String(t.id)!==String(id);}));
+  renderTasks();
+  toast('Task removed');
+}
+
+
+function dlTasksCSV(){
+  var tasks=getTasks();
+  var esc=function(v){var s=v==null?'':String(v);if(s.includes(',')||s.includes('"')||s.includes('\n'))s='"'+s.replace(/"/g,'""')+'"';return s;};
+  var rows=['task,date,status,completedOn'];
+  tasks.forEach(function(t){
+    rows.push([esc(t.text),esc(t.date.slice(0,10)),esc(t.done?'completed':'pending'),esc(t.doneAt?t.doneAt.slice(0,10):'')].join(','));
+  });
+  dl(rows.join('\n'),'tasks.csv','text/csv');
+  toast('Tasks exported ✓');
+}
+
 </script>
 </body>
 </html>
