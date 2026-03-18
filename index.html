@@ -379,6 +379,23 @@ function nav(p,el){
 }
 
 let pendingResult=null;
+
+function classifyRawText(raw){
+  // Pre-split sentences into done vs todo based on strong signal words
+  var TODO_SIGNALS=['i need to','need to send','i still need','i would need','i would also need','book a time','book a meeting','set up a meeting','setup a meeting','create a trigger','create a flow','create an additional','create using','research ','ensure to','give her','give head','send a note','send her the following','i need to send','obtain the','obtain digital'];
+  var sentences=raw.replace(/([.!?]) /g,'$1\n').split('\n');
+  var doneLines=[];
+  var todoLines=[];
+  sentences.forEach(function(s){
+    var lower=s.toLowerCase().trim();
+    if(!lower)return;
+    var isTodo=TODO_SIGNALS.some(function(sig){return lower.indexOf(sig)!==-1;});
+    if(isTodo){todoLines.push(s.trim());}
+    else{doneLines.push(s.trim());}
+  });
+  return {done:doneLines.join(' '),todo:todoLines.join(' ')};
+}
+
 async function processDay(){
   const raw=document.getElementById('rawIn').value.trim();
   if(!raw)return;
@@ -387,26 +404,37 @@ async function processDay(){
   btn.disabled=true;btn.innerHTML='<span class="spinner"></span>AI is reading your day…';
   const rc=document.getElementById('resultCard'),rs=document.getElementById('resultSections');
   rc.style.display='block';rs.innerHTML='<p style="font-size:14px;color:var(--ink4);padding:8px 0;">Analysing and cleaning up…</p>';
-  const prompt=`You are a professional work journal assistant. A person has given you rough notes about their workday.
+  const classified=classifyRawText(raw);
+  const prompt=`You are a work journal assistant. I have PRE-LABELLED the notes for you into two sections.
 
-1. Clean up the grammar, spelling and structure — keep it sounding like THEM, natural and human, not corporate
-2. Identify and categorise what they did:
-   - Wins/Achievements, Tasks Completed, KPIs/Metrics, In Progress, Blockers/Challenges
+SECTION A - THINGS DONE TODAY (put these in tasksCompleted and wins and kpis):
+${classified.done}
+
+SECTION B - THINGS STILL TO DO (put ALL of these in todoItems, none in tasksCompleted):
+${classified.todo}
+
+Rules:
+- tasksCompleted: actions from SECTION A that were completed today
+- todoItems: ALL items from SECTION B — every single one, no exceptions
+- wins: positive outcomes and achievements from SECTION A  
+- kpis: any numbers or metrics from SECTION A
+- NEVER put anything from SECTION B into tasksCompleted
 
 Respond ONLY with valid JSON:
 {
-  "cleanSummary": "2-4 sentence human summary in first person",
-  "wins": [], "tasks": [], "kpis": [], "inProgress": [], "blockers": [],
+  "cleanSummary": "2-4 sentence summary in first person covering the whole day",
+  "wins": [],
+  "tasksCompleted": [],
+  "todoItems": [],
+  "kpis": [],
+  "inProgress": [],
+  "blockers": [],
   "tags": ["tag1","tag2"],
   "dayMood": "productive|slow|mixed|great",
   "grammarScore": 7
 }
 
-Leave arrays empty [] if nothing applies. Tags = 1-3 short topic words.
-grammarScore: rate the RAW notes 1-10 for grammar and clarity. Be honest and consistent.
-
-Raw notes:
-${raw}`;
+Leave arrays empty [] if nothing applies. Tags = 1-3 words. grammarScore rates the original raw notes 1-10.`;
   try{
     if(!apiKey)throw new Error('No API key — go to Setup first');
     const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:1200,messages:[{role:'user',content:prompt}]})});
@@ -424,7 +452,7 @@ ${raw}`;
 function renderResult(p){
   const rs=document.getElementById('resultSections');
   let html=`<div class="result-section"><div class="result-text" style="font-size:15px;">${escHtml(p.cleanSummary||'')}</div></div>`;
-  [{key:'wins',label:'🏆 Wins & achievements',cls:'tag-win'},{key:'tasks',label:'✅ Tasks completed',cls:'tag-task'},{key:'kpis',label:'📊 KPIs & metrics',cls:'tag-kpi'},{key:'inProgress',label:'🔄 In progress',cls:'tag-general'},{key:'blockers',label:'🚧 Blockers',cls:'tag-blocker'}].forEach(s=>{
+  [{key:'wins',label:'🏆 Wins & achievements',cls:'tag-win'},{key:'tasksCompleted',label:'✅ Tasks completed today',cls:'tag-task'},{key:'todoItems',label:'📌 Still to do',cls:'tag-general'},{key:'kpis',label:'📊 KPIs & metrics',cls:'tag-kpi'},{key:'inProgress',label:'🔄 In progress',cls:'tag-general'},{key:'blockers',label:'🚧 Blockers',cls:'tag-blocker'}].forEach(s=>{
     const items=p[s.key];if(!items||!items.length)return;
     html+=`<div class="result-section" style="margin-top:12px;"><div class="result-section-head"><span class="tag ${s.cls}">${s.label}</span></div><ul style="padding-left:1.1rem;margin-top:4px;">${items.map(i=>`<li style="font-size:13px;color:var(--ink2);line-height:1.6;margin-bottom:2px;">${escHtml(i)}</li>`).join('')}</ul></div>`;
   });
@@ -482,7 +510,7 @@ async function saveEntry(){
   btn.disabled=true;btn.innerHTML='<span class="spinner"></span>Saving…';
   var _pv=document.getElementById('entryDatePicker')?document.getElementById('entryDatePicker').value:'';
   const now=_pv?new Date(_pv+'T'+new Date().toTimeString().slice(0,8)):new Date();
-  const entry={id:now.getTime(),date:now.toISOString(),dayLabel:now.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'}),weekStart:getMonday(now),text:raw,rawText:raw,cleanText:parsed.cleanSummary||'',tags:(parsed.tags||[]).join(', '),wins:(parsed.wins||[]).join(' | '),kpis:(parsed.kpis||[]).join(' | '),tasks:(parsed.tasks||[]).join(' | '),inProgress:(parsed.inProgress||[]).join(' | '),blockers:(parsed.blockers||[]).join(' | '),dayMood:parsed.dayMood||'',grammarScore:parsed.grammarScore||null,parsed};
+  const entry={id:now.getTime(),date:now.toISOString(),dayLabel:now.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'}),weekStart:getMonday(now),text:raw,rawText:raw,cleanText:parsed.cleanSummary||'',tags:(parsed.tags||[]).join(', '),wins:(parsed.wins||[]).join(' | '),kpis:(parsed.kpis||[]).join(' | '),tasks:(parsed.tasksCompleted||parsed.tasks||[]).join(' | '),todoItems:(parsed.todoItems||[]).join(' | '),inProgress:(parsed.inProgress||[]).join(' | '),blockers:(parsed.blockers||[]).join(' | '),dayMood:parsed.dayMood||'',grammarScore:parsed.grammarScore||null,parsed};
   const entries=getEntries();entries.unshift(entry);saveEntries(entries);
   mergeTasksFromEntry(entry);
   renderStats();
@@ -547,7 +575,7 @@ function renderWeekly(){
     const wE=weeks[w],s=summaryMap[w],endDate=new Date(w);endDate.setDate(endDate.getDate()+4);
     const range=`${new Date(w).toLocaleDateString('en-GB',{day:'numeric',month:'short'})} – ${endDate.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}`;
     const totalWins=wE.reduce((n,e)=>n+(e.parsed&&e.parsed.wins?e.parsed.wins.length:0),0);
-    const totalTasks=wE.reduce((n,e)=>n+(e.parsed&&e.parsed.tasks?e.parsed.tasks.length:0),0);
+    const totalTasks=wE.reduce((n,e)=>n+(e.parsed&&(e.parsed.tasksCompleted||e.parsed.tasks)?(e.parsed.tasksCompleted||e.parsed.tasks).length:0),0);
     const totalKPIs=wE.reduce((n,e)=>n+(e.parsed&&e.parsed.kpis?e.parsed.kpis.length:0),0);
     const sHtml=s?`<div class="week-summary-text" id="week-summary-${w}">${escHtml(s.summary)}</div>`:`<div class="summary-pending">No summary yet — hit Generate.</div>`;
     return `<div class="week-card"><div class="week-head"><div class="week-title">Week of ${new Date(w).toLocaleDateString('en-GB',{day:'numeric',month:'long'})}</div><div class="week-range">${range}</div></div><div class="week-stats"><span class="w-stat">📅 <strong>${wE.length}</strong> days</span><span class="w-stat">🏆 <strong>${totalWins}</strong> wins</span><span class="w-stat">✅ <strong>${totalTasks}</strong> tasks</span>${totalKPIs?`<span class="w-stat">📊 <strong>${totalKPIs}</strong> KPIs</span>`:''}</div>${sHtml}<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;"><button class="btn-gen-summary" id="sumBtn-${w}" onclick="generateWeeklySummary('${w}')">${s?'🔄 Regenerate':'✨ Generate summary'}</button>${s?`<button class="btn-ghost" style="font-size:12px;padding:6px 12px;" onclick="copySummary('${w}')">Copy</button><button onclick="editWeeklySummary('${w}')" style="padding:6px 12px;font-size:12px;font-weight:600;border:1px solid var(--rule);border-radius:var(--r-sm);background:transparent;color:var(--ink3);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--rule)';this.style.color='var(--ink3)'">✏️ Edit</button><button onclick="deleteWeeklySummary('${w}')" style="padding:6px 12px;font-size:12px;font-weight:600;border:1px solid var(--rule);border-radius:var(--r-sm);background:transparent;color:var(--ink3);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;" onmouseover="this.style.borderColor='var(--rose)';this.style.color='var(--rose)'" onmouseout="this.style.borderColor='var(--rule)';this.style.color='var(--ink3)'">🗑 Delete</button>`:''}</div></div>`;
@@ -795,12 +823,12 @@ function mergeTasksFromEntry(entry){
   var now=new Date().toISOString();
   completed.forEach(function(taskText){
     if(!taskText||existingTexts.includes(taskText.toLowerCase().trim()))return;
-    existing.unshift({id:Date.now()+''+Math.floor(Math.random()*10000),text:taskText,date:entry.date,dayLabel:entry.dayLabel,done:true,doneAt:now});
+    existing.unshift({id:String(Date.now())+String(Math.floor(Math.random()*10000)),text:taskText,date:entry.date,dayLabel:entry.dayLabel,done:true,doneAt:now});
     existingTexts.push(taskText.toLowerCase().trim());
   });
   todos.forEach(function(taskText){
     if(!taskText||existingTexts.includes(taskText.toLowerCase().trim()))return;
-    existing.unshift({id:Date.now()+''+Math.floor(Math.random()*10000),text:taskText,date:entry.date,dayLabel:entry.dayLabel,done:false,doneAt:null});
+    existing.unshift({id:String(Date.now())+String(Math.floor(Math.random()*10000)),text:taskText,date:entry.date,dayLabel:entry.dayLabel,done:false,doneAt:null});
     existingTexts.push(taskText.toLowerCase().trim());
   });
   saveTasks(existing);
@@ -856,7 +884,6 @@ function renderTasks(){
     if(!isDone){
       var flagBtn=document.createElement('button');
       flagBtn.textContent=task.priority?'🚩':'⚑';
-      flagBtn.title=task.priority?'Remove priority':'Mark as priority';
       flagBtn.style.cssText='padding:3px 9px;font-size:13px;border:1px solid '+(task.priority?'#e11d48':'var(--rule)')+';border-radius:99px;background:'+(task.priority?'#fff1f2':'transparent')+';color:'+(task.priority?'#e11d48':'var(--ink4)')+';cursor:pointer;';
       flagBtn.dataset.tid=String(task.id);
       flagBtn.addEventListener('click',function(){togglePriority(this.dataset.tid);});
@@ -888,8 +915,10 @@ function renderTasks(){
   }
 
   if(todo.length){
-    el.appendChild(makeHeader('To do — '+todo.length+' remaining','var(--ink3)'));
-    todo.forEach(function(t){el.appendChild(makeRow(t));});
+    var priority=todo.filter(function(t){return t.priority;});
+    var normal=todo.filter(function(t){return !t.priority;});
+    if(priority.length){el.appendChild(makeHeader('🚩 Priority — '+priority.length+' task'+(priority.length>1?'s':''),'#e11d48'));priority.forEach(function(t){el.appendChild(makeRow(t));});}
+    if(normal.length){el.appendChild(makeHeader('To do — '+normal.length+' remaining','var(--ink3)'));normal.forEach(function(t){el.appendChild(makeRow(t));});}
   }
   if(doneList.length){
     el.appendChild(makeHeader('Completed — '+doneList.length+' done','var(--green)'));
@@ -943,9 +972,11 @@ function saveTaskEdit(id){
   var tasks=getTasks();
   var idx=tasks.findIndex(function(t){return String(t.id)===String(id);});
   if(idx===-1)return;
-  var inp=document.querySelector('#task-text-'+id+' input');
-  if(!inp)return;
-  var val=inp.value.trim();
+  var tel=document.getElementById('task-text-'+id);
+  if(!tel)return;
+  var ins=tel.getElementsByTagName('input');
+  if(!ins.length)return;
+  var val=ins[0].value.trim();
   if(!val)return;
   tasks[idx].text=val;
   saveTasks(tasks);
@@ -953,20 +984,19 @@ function saveTaskEdit(id){
   toast('Task updated ✓');
 }
 
-function deleteTask(id){
-  if(!confirm('Remove this task?'))return;
-  saveTasks(getTasks().filter(function(t){return String(t.id)!==String(id);}));
-  renderTasks();
-  toast('Task removed');
-}
 function togglePriority(id){
   var tasks=getTasks();
   var idx=tasks.findIndex(function(t){return String(t.id)===String(id);});
   if(idx===-1)return;
   tasks[idx].priority=!tasks[idx].priority;
-  saveTasks(tasks);
-  renderTasks();
+  saveTasks(tasks);renderTasks();
   toast(tasks[idx].priority?'Marked as priority':'Priority removed');
+}
+function deleteTask(id){
+  if(!confirm('Remove this task?'))return;
+  saveTasks(getTasks().filter(function(t){return String(t.id)!==String(id);}));
+  renderTasks();
+  toast('Task removed');
 }
 
 
